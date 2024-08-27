@@ -12,7 +12,7 @@ Accio is a [fluent interface](https://en.wikipedia.org/wiki/Fluent_interface#Jav
 
 ## 🚀 Installation
 
-Just add (copy/paste) [`src/accio.ts`](https://github.com/TheRuky/accio/blob/main/src/main.ts) file to your project. Modify it or use it as is - it's up to you. 
+Just add (copy/paste) [`src/accio.ts`](https://github.com/TheRuky/accio/blob/main/src/accio.ts) file to your project. Modify it or use it as is - it's up to you. 
 
 ## 🤨❓ FAQ
 
