@@ -4,7 +4,10 @@ type FetchFunction = typeof fetch;
 type AccioHeaderValue = string | number | boolean | null | undefined;
 type AccioQueryValue = string | number | boolean | null | undefined;
 type AccioHeaders = Headers | Record<string, AccioHeaderValue> | [string, AccioHeaderValue][];
-type AccioQuery = URLSearchParams | Record<string, AccioQueryValue | AccioQueryValue[]> | [string, AccioQueryValue | AccioQueryValue[]][];
+type AccioQuery =
+	| URLSearchParams
+	| Record<string, AccioQueryValue | AccioQueryValue[]>
+	| [string, AccioQueryValue | AccioQueryValue[]][];
 type AccioMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type AccioResponse<T> = [T | null, HttpError | null, Response];
 type AccioRequestInit = Omit<RequestInit, 'headers' | 'method' | 'body'>;
@@ -13,370 +16,366 @@ type AccioBody = RequestInit['body'] | { [key: string]: any };
 const NO_BODY_METHODS: AccioMethod[] = ['GET', 'DELETE'];
 
 type AccioOptions = {
-  url: string;
-  base: string;
-  headers: AccioHeaders;
-  query: AccioQuery;
-  fetch: FetchFunction;
-  method: AccioMethod;
-  body: AccioBody;
-  config: AccioRequestInit;
-  delay: number;
-}
+	url: string;
+	base: string;
+	headers: AccioHeaders;
+	query: AccioQuery;
+	fetch: FetchFunction;
+	method: AccioMethod;
+	body: AccioBody;
+	config: AccioRequestInit;
+	delay: number;
+};
 
 type AccioInstanceOptions = AccioOptions & {
-  headers: Headers;
-  query: URLSearchParams;
-}
-
-export interface HttpError extends Error {
-  status: number;
-  statusText: string;
-  data: any;
-}
+	headers: Headers;
+	query: URLSearchParams;
+};
 
 export class HttpError extends Error {
-  status = 0;
-  statusText = 'Unknown Error';
-  data: any;
+	status = 0;
+	statusText = 'Unknown Error';
+	data: any;
 
-  constructor(status: number, statusText: string, data: any = null) {
-    super(`${status} ${statusText}`.trim());
+	constructor(status: number, statusText: string, data: any = null) {
+		super(`${status} ${statusText}`.trim());
 
-    this.status = status;
-    this.statusText = statusText;
-    this.data = data;
-  }
+		this.status = status;
+		this.statusText = statusText;
+		this.data = data;
+	}
 }
 
 const parseHeaders = (headers: AccioHeaders) => {
-  if (headers instanceof Headers) {
-    return headers;
-  }
+	if (headers instanceof Headers) {
+		return headers;
+	}
 
-  const parsed = new Headers();
+	const parsed = new Headers();
 
-  if (Array.isArray(headers)) {
-    headers.forEach(([key, value]) => {
-      if(value == null) {
-        return;
-      }
+	if (Array.isArray(headers)) {
+		headers.forEach(([key, value]) => {
+			if (value == null) {
+				return;
+			}
 
-      parsed.append(key, value.toString());
-    });
+			parsed.append(key, value.toString());
+		});
 
-    return parsed;
-  }
+		return parsed;
+	}
 
-  Object.entries(headers).forEach(([key, value]) => {
-    if(value == null) {
-      return;
-    }
+	Object.entries(headers).forEach(([key, value]) => {
+		if (value == null) {
+			return;
+		}
 
-    parsed.append(key, value.toString());
-  });
+		parsed.append(key, value.toString());
+	});
 
-  return parsed;
-}
+	return parsed;
+};
 
 const parseQuery = (query: AccioQuery) => {
-  if (query instanceof URLSearchParams) {
-    return query;
-  }
+	if (query instanceof URLSearchParams) {
+		return query;
+	}
 
-  const parsed = new URLSearchParams();
+	const parsed = new URLSearchParams();
 
-  if (Array.isArray(query)) {
-    query.forEach(([key, value]) => {
-      if(value == null) {
-        return;
-      }
+	if (Array.isArray(query)) {
+		query.forEach(([key, value]) => {
+			if (value == null) {
+				return;
+			}
 
-      if (Array.isArray(value)) {
-        value.forEach(v => {
-          if(v == null) {
-            return;
-          }
+			if (Array.isArray(value)) {
+				value.forEach((v) => {
+					if (v == null) {
+						return;
+					}
 
-          parsed.append(key, v.toString());
-        });
+					parsed.append(key, v.toString());
+				});
 
-        return;
-      }
+				return;
+			}
 
-      parsed.append(key, value.toString());
-    });
+			parsed.append(key, value.toString());
+		});
 
-    return parsed;
-  }
+		return parsed;
+	}
 
-  Object.entries(query).forEach(([key, value]) => {
-    if(value == null) {
-      return;
-    }
+	Object.entries(query).forEach(([key, value]) => {
+		if (value == null) {
+			return;
+		}
 
-    if (Array.isArray(value)) {
-      value.forEach(v => {
-        if(v == null) {
-          return;
-        }
+		if (Array.isArray(value)) {
+			value.forEach((v) => {
+				if (v == null) {
+					return;
+				}
 
-        parsed.append(key, v.toString());
-      });
+				parsed.append(key, v.toString());
+			});
 
-      return;
-    }
+			return;
+		}
 
-    parsed.append(key, value.toString());
-  });
+		parsed.append(key, value.toString());
+	});
 
-  return parsed;
-}
+	return parsed;
+};
 
 const isBodyTypeAllowed = (body: AccioBody): body is RequestInit['body'] => {
-  if(typeof body === 'string') {
-    return true;
-  }
+	if (typeof body === 'string') {
+		return true;
+	}
 
-  return [
-    'ArrayBuffer',
-    'Blob',
-    'DataView',
-    'File', 
-    'FormData', 
-    'URLSearchParams'
-  ].some((type) => body instanceof ((globalThis || window) as any)[type]);
-}
+	return ['ArrayBuffer', 'Blob', 'DataView', 'File', 'FormData', 'URLSearchParams'].some(
+		(type) => body instanceof ((globalThis || window) as any)[type]
+	);
+};
 
 const ff = (f?: FetchFunction) => f || fetch;
 
 const request = (options: AccioInstanceOptions) => {
-  const url = new URL(options.url, options.base || undefined) + (options.query.size ? `?${options.query}` : '');
-  const body = options.body && NO_BODY_METHODS.includes(options.method) ? undefined : (isBodyTypeAllowed(options.body) ? options.body : JSON.stringify(options.body));
+	const url =
+		new URL(options.url, options.base || undefined) +
+		(options.query.size ? `?${options.query}` : '');
+	const body =
+		options.body && NO_BODY_METHODS.includes(options.method)
+			? undefined
+			: isBodyTypeAllowed(options.body)
+				? options.body
+				: JSON.stringify(options.body);
 
-  const promise = ff(options.fetch)(url, {
-    method: options.method,
-    headers: options.headers,
-    body,
-    ...options.config,
-  });
+	const promise = ff(options.fetch)(url, {
+		method: options.method,
+		headers: options.headers,
+		body,
+		...options.config
+	});
 
-  if(options.delay) {
-    return new Promise<Response>((resolve) => setTimeout(() => resolve(promise), options.delay));
-  }
+	if (options.delay) {
+		return new Promise<Response>((resolve) => setTimeout(() => resolve(promise), options.delay));
+	}
 
-  return promise;
-}
+	return promise;
+};
 
 const to = async <T>(response: Response, body: Promise<T>): Promise<AccioResponse<T>> => {
-  const clone = response.clone();
-  
-  if(!response.ok) {
-    try {
-      return [null, new HttpError(response.status, response.statusText, await body), clone];
-    } catch (error) {
-      return [null, new HttpError(0, 'Unknown Error', error), clone];
-    }
-  }
+	const clone = response.clone();
 
-  try {
-    return [await body, null, clone];
-  } catch (error) {
-    return [null, new HttpError(0, 'Unknown Error', error), clone];
-  }
-}
+	if (!response.ok) {
+		try {
+			return [null, new HttpError(response.status, response.statusText, await body), clone];
+		} catch (error) {
+			return [null, new HttpError(0, 'Unknown Error', error), clone];
+		}
+	}
+
+	try {
+		return [await body, null, clone];
+	} catch (error) {
+		return [null, new HttpError(0, 'Unknown Error', error), clone];
+	}
+};
 
 class Accio {
-  #options!: AccioInstanceOptions;
-  #immutable!: boolean;
+	#options!: AccioInstanceOptions;
+	#immutable!: boolean;
 
-  constructor(options: Partial<AccioOptions>, immutable = false) {
-    this.#immutable = immutable;
-    this.#options = {} as AccioInstanceOptions;
-    
-    this.#options.url = options.url || '';
-    this.#options.base = options.base || '';
-    this.#options.headers = parseHeaders(options.headers || {});
-    this.#options.query = parseQuery(options.query || {});
-    this.#options.fetch = ff(options.fetch);
-    this.#options.method = options.method || 'GET';
-    this.#options.body = options.body || undefined;
-    this.#options.config = options.config || {};
-    this.#options.delay = options.delay || 0;
-  }
+	constructor(options: Partial<AccioOptions>, immutable = false) {
+		this.#immutable = immutable;
+		this.#options = {} as AccioInstanceOptions;
 
-  config(config: Partial<AccioRequestInit>) {
-    const mix = { ...this.#options.config, ...config };
+		this.#options.url = options.url || '';
+		this.#options.base = options.base || '';
+		this.#options.headers = parseHeaders(options.headers || {});
+		this.#options.query = parseQuery(options.query || {});
+		this.#options.fetch = ff(options.fetch);
+		this.#options.method = options.method || 'GET';
+		this.#options.body = options.body || undefined;
+		this.#options.config = options.config || {};
+		this.#options.delay = options.delay || 0;
+	}
 
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, config: mix });
-    }
+	config(config: Partial<AccioRequestInit>) {
+		const mix = { ...this.#options.config, ...config };
 
-    this.#options.config = mix;
-    return this;
-  }
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, config: mix });
+		}
 
-  delay(ms: number) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, delay: ms });
-    }
+		this.#options.config = mix;
+		return this;
+	}
 
-    this.#options.delay = ms;
-    return this;
-  }
+	delay(ms: number) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, delay: ms });
+		}
 
-  base(base: string) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, base });
-    }
-    
-    this.#options.base = base;
-    return this;
-  }
+		this.#options.delay = ms;
+		return this;
+	}
 
-  url(url: string) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, url });
-    }
+	base(base: string) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, base });
+		}
 
-    this.#options.url = url;
-    return this;
-  }
+		this.#options.base = base;
+		return this;
+	}
 
-  fetch(fetch: FetchFunction) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, fetch });
-    }
+	url(url: string) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, url });
+		}
 
-    this.#options.fetch = fetch;
-    return this;
-  }
+		this.#options.url = url;
+		return this;
+	}
 
-  headers(value: AccioHeaders) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, headers: value });
-    }
+	fetch(fetch: FetchFunction) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, fetch });
+		}
 
-    this.#options.headers = parseHeaders(value);
-    return this;
-  }
+		this.#options.fetch = fetch;
+		return this;
+	}
 
-  body(value: AccioBody) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, body: value });
-    }
+	headers(value: AccioHeaders) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, headers: value });
+		}
 
-    this.#options.body = value;
-    return this;
-  }
+		this.#options.headers = parseHeaders(value);
+		return this;
+	}
 
-  query(value: AccioQuery) {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, query: value });
-    }
+	body(value: AccioBody) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, body: value });
+		}
 
-    this.#options.query = parseQuery(value);
-    return this;
-  }
+		this.#options.body = value;
+		return this;
+	}
 
-  get() {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, method: 'GET' });
-    }
+	query(value: AccioQuery) {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, query: value });
+		}
 
-    this.#options.method = 'GET';
-    return this;
-  }
+		this.#options.query = parseQuery(value);
+		return this;
+	}
 
-  post(body?: AccioBody) {
-    if(body === undefined) {
-      body = this.#options.body;
-    }
+	get() {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, method: 'GET' });
+		}
 
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, body, method: 'POST' });
-    }
+		this.#options.method = 'GET';
+		return this;
+	}
 
-    this.#options.body = body;
-    this.#options.method = 'POST';
+	post(body?: AccioBody) {
+		if (body === undefined) {
+			body = this.#options.body;
+		}
 
-    return this;
-  }
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, body, method: 'POST' });
+		}
 
-  put(body?: AccioBody) {
-    if(body === undefined) {
-      body = this.#options.body;
-    }
+		this.#options.body = body;
+		this.#options.method = 'POST';
 
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, body, method: 'PUT' });
-    }
+		return this;
+	}
 
-    this.#options.body = body;
-    this.#options.method = 'PUT';
-    
-    return this;
-  }
+	put(body?: AccioBody) {
+		if (body === undefined) {
+			body = this.#options.body;
+		}
 
-  patch(body?: AccioBody) {
-    if(body === undefined) {
-      body = this.#options.body;
-    }
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, body, method: 'PUT' });
+		}
 
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, body, method: 'PATCH' });
-    }
+		this.#options.body = body;
+		this.#options.method = 'PUT';
 
-    this.#options.body = body;
-    this.#options.method = 'PATCH';
-    
-    return this;
-  }
+		return this;
+	}
 
-  delete() {
-    if(this.#immutable) {
-      return new Accio({ ...this.#options, method: 'DELETE' });
-    }
+	patch(body?: AccioBody) {
+		if (body === undefined) {
+			body = this.#options.body;
+		}
 
-    this.#options.method = 'DELETE';
-    return this;
-  }
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, body, method: 'PATCH' });
+		}
 
-  async response() {
-    return request(this.#options);
-  }
+		this.#options.body = body;
+		this.#options.method = 'PATCH';
 
-  async json<T = any>() {
-    return request(this.#options).then(res => to(res, res.json() as Promise<T>));
-  }
+		return this;
+	}
 
-  async arrayBuffer() {
-    return request(this.#options).then(res => to(res, res.arrayBuffer()));
-  }
+	delete() {
+		if (this.#immutable) {
+			return new Accio({ ...this.#options, method: 'DELETE' });
+		}
 
-  async blob() {
-    return request(this.#options).then(res => to(res, res.blob()));
-  }
+		this.#options.method = 'DELETE';
+		return this;
+	}
 
-  async formData() {
-    return request(this.#options).then(res => to(res, res.formData()));
-  }
+	async response() {
+		return request(this.#options);
+	}
 
-  async text() {
-    return request(this.#options).then(res => to(res, res.text()));
-  }
+	async json<T = any>() {
+		return request(this.#options).then((res) => to(res, res.json() as Promise<T>));
+	}
 
-  debug() {
-    return this.#options;
-  }
+	async arrayBuffer() {
+		return request(this.#options).then((res) => to(res, res.arrayBuffer()));
+	}
+
+	async blob() {
+		return request(this.#options).then((res) => to(res, res.blob()));
+	}
+
+	async formData() {
+		return request(this.#options).then((res) => to(res, res.formData()));
+	}
+
+	async text() {
+		return request(this.#options).then((res) => to(res, res.text()));
+	}
+
+	debug() {
+		return this.#options;
+	}
 }
 
 function accio(url: string, options?: Partial<Omit<AccioOptions, 'url'>>, immutable = false) {
-  return new Accio({ ...options, url }, immutable);
+	return new Accio({ ...options, url }, immutable);
 }
 
 accio.create = (options: Partial<AccioOptions>, immutable = true) => {
-  return (url?: string) => new Accio({ ...options, url }, immutable);
-}
+	return (url?: string) => new Accio({ ...options, url }, immutable);
+};
 
 export { accio };
