@@ -8,17 +8,21 @@ Accio is a [fluent interface](https://en.wikipedia.org/wiki/Fluent_interface#Jav
 - 🔗 **Clean API** - intuitive, chainable, refactorable.
 - 💪 **Strongly typed** - written in TypeScript.
 - ✅ **Mutable or immutable** - it's your choice.
-- 👌 **Small in size** - the raw `.ts` file is approx. 7kB.
+- 👌 **Small in size** - the raw `.ts` file is approx. 10kB.
+
+## 🚀 Installation
+
+Just add (copy/paste) [`src/accio.ts`](https://github.com/TheRuky/accio/blob/main/src/main.ts) file to your project. Modify it or use it as is - it's up to you. 
 
 ## 🤨❓ FAQ
 
-### 1. How do I install it?
+### 1. Is there an NPM package for Accio?
 
-Currently, there is no NPM package or CDN link for Accio. The easiest way is to directly add the `accio.ts` file to your project. It's barbaric, I know, but that's how it is."
+Currently, there is no NPM package or CDN link for Accio. The easiest way is to directly add the `accio.ts` file to your project. It's barbaric, I know, but that's how it is.
 
 ### 2. Your "library" sucks - I want better stuff!
 
-Accio is not a library - it's literally a file. Nevertheless, take a look at the libraries that inspired Accio.
+Accio is (technically) not a library - it's literally a file. Nevertheless, take a look at the libraries that inspired Accio.
 
 - [ky](https://github.com/sindresorhus/ky)
 - [wretch](https://github.com/elbywan/wretch)
