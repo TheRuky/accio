@@ -168,20 +168,22 @@ const request = (options: AccioInstanceOptions) => {
 };
 
 const to = async <T>(response: Response, body: Promise<T>): Promise<AccioResponse<T>> => {
-	const clone = response.clone();
-
 	if (!response.ok) {
 		try {
-			return [null, new HttpError(response.status, response.statusText, await body), clone];
+			return [null, new HttpError(response.status, response.statusText, await body), response];
 		} catch (error) {
-			return [null, new HttpError(0, 'Unknown Error', error), clone];
+			return [null, new HttpError(0, 'Unknown Error', error), response];
 		}
 	}
 
+  if(response.status === 204) {
+    return [null, null, response];
+  }
+
 	try {
-		return [await body, null, clone];
+		return [await body, null, response];
 	} catch (error) {
-		return [null, new HttpError(0, 'Unknown Error', error), clone];
+		return [null, new HttpError(0, 'Unknown Error', error), response];
 	}
 };
 
@@ -346,23 +348,23 @@ class Accio {
 	}
 
 	async json<T = any>() {
-		return request(this.#options).then((res) => to(res, res.json() as Promise<T>));
+		return request(this.#options).then((res) => to(res.clone(), res.json() as Promise<T>));
 	}
 
 	async arrayBuffer() {
-		return request(this.#options).then((res) => to(res, res.arrayBuffer()));
+		return request(this.#options).then((res) => to(res.clone(), res.arrayBuffer()));
 	}
 
 	async blob() {
-		return request(this.#options).then((res) => to(res, res.blob()));
+		return request(this.#options).then((res) => to(res.clone(), res.blob()));
 	}
 
 	async formData() {
-		return request(this.#options).then((res) => to(res, res.formData()));
+		return request(this.#options).then((res) => to(res.clone(), res.formData()));
 	}
 
 	async text() {
-		return request(this.#options).then((res) => to(res, res.text()));
+		return request(this.#options).then((res) => to(res.clone(), res.text()));
 	}
 
 	debug() {

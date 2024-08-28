@@ -10,9 +10,39 @@ Accio is a [fluent interface](https://en.wikipedia.org/wiki/Fluent_interface#Jav
 - ✅ **Mutable or immutable** - it's your choice.
 - 👌 **Small in size** - the raw `.ts` file is approx. 10kB.
 
-## 🚀 Installation
+## 🛠️ Installation
 
 Just add (copy/paste) [`src/accio.ts`](https://github.com/TheRuky/accio/blob/main/src/accio.ts) file to your project. Modify it or use it as is - it's up to you. 
+
+## 🚀 Usage
+
+### ↔️ A basic `GET` request
+
+```ts
+import { accio } from './accio.ts';
+
+const [data, error] = await accio('https://...').json();
+
+console.log(data, error);
+```
+
+### ↔️ A typed JSON response
+
+```ts
+import { accio } from './accio.ts';
+
+type Post = {
+  id: number;
+  title: string;
+  content: string;
+}
+
+const [data, error] = await accio('https://...').json<Post[]>();
+
+// data is not `any` anymore, but Post array
+
+console.log(data, error);
+```
 
 ## 🤨❓ FAQ
 
