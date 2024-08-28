@@ -26,6 +26,8 @@ const [data, error] = await accio('https://...').json();
 console.log(data, error);
 ```
 
+> ℹ️ If HTTP method is not specified, it will use `GET` by default.
+
 ### ↔️ A typed JSON response
 
 ```ts
@@ -43,6 +45,8 @@ const [data, error] = await accio('https://...').json<Post[]>();
 
 console.log(data, error);
 ```
+
+> ℹ️ If type is not provided to `.json()`, it will use `any` by default.
 
 ## 🤨❓ FAQ
 
