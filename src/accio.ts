@@ -1,3 +1,9 @@
+/**
+ * @name accio
+ * @license MIT
+ * @version 1.0.0
+ */
+
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
 type FetchFunction = typeof fetch;
@@ -12,6 +18,21 @@ type AccioMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type AccioResponse<T> = [T | null, HttpError | null, Response];
 type AccioRequestInit = Omit<RequestInit, 'headers' | 'method' | 'body'>;
 type AccioBody = RequestInit['body'] | { [key: string]: any };
+type AccioProgress = Partial<{
+  next: (event: AccioProgressEvent) => void;
+  done: (event: AccioProgressEvent) => void;
+  error: (error: Error) => void;
+}>;
+type AccioResponseType = 'json' | 'arrayBuffer' | 'blob' | 'formData' | 'text';
+
+type AccioProgressEvent = {
+  size: number;
+  loaded: number;
+  total: number;
+  percent: number;
+  done: boolean
+  timestamp: number;
+}
 
 const NO_BODY_METHODS: AccioMethod[] = ['GET', 'DELETE'];
 
@@ -25,6 +46,7 @@ type AccioOptions = {
 	body: AccioBody;
 	config: AccioRequestInit;
 	delay: number;
+  progress: AccioProgress | null;
 };
 
 type AccioInstanceOptions = AccioOptions & {
@@ -130,7 +152,7 @@ const parseQuery = (query: AccioQuery) => {
 	return parsed;
 };
 
-const isBodyTypeAllowed = (body: AccioBody): body is RequestInit['body'] => {
+const isFetchBodyTypeAllowed = (body: AccioBody): body is RequestInit['body'] => {
 	if (typeof body === 'string') {
 		return true;
 	}
@@ -140,25 +162,129 @@ const isBodyTypeAllowed = (body: AccioBody): body is RequestInit['body'] => {
 	);
 };
 
+const isXhrBodyTypeAllowed = (body: AccioBody): body is Document | XMLHttpRequestBodyInit | null => {
+  if(body == null) {
+    return true;
+  }
+
+  if (typeof body === 'string') {
+		return true;
+	}
+  
+  return ['ArrayBuffer', 'Blob', 'Document', 'FormData', 'URLSearchParams'].some(
+		(type) => body instanceof ((globalThis || window) as any)[type]
+	);
+}
+
+const parseXhrResponseHeaders = (xhr: XMLHttpRequest): Headers => {
+  const headers = new Headers();
+
+  xhr.getAllResponseHeaders().split('\r\n').forEach((header) => {
+    const [key, value] = header.split(': ');
+
+    if(key && value) {
+      headers.append(key, value);
+    }
+  });
+
+  return headers;
+};
+
 const ff = (f?: FetchFunction) => f || fetch;
 
-const request = (options: AccioInstanceOptions) => {
-	const url =
-		new URL(options.url, options.base || undefined) +
-		(options.query.size ? `?${options.query}` : '');
-	const body =
-		options.body && NO_BODY_METHODS.includes(options.method)
-			? undefined
-			: isBodyTypeAllowed(options.body)
-				? options.body
-				: JSON.stringify(options.body);
+const parseUrl = (options: AccioInstanceOptions) => new URL(options.url, options.base || undefined) +
+(options.query.size ? `?${options.query}` : '');
+
+const parseFetchBody = (options: AccioInstanceOptions) => {
+  if(NO_BODY_METHODS.includes(options.method)) {
+    return undefined;
+  }
+
+  if(isFetchBodyTypeAllowed(options.body)) {
+    return options.body;
+  }
+
+  return JSON.stringify(options.body);
+}
+
+const parseXhrBody = (options: AccioInstanceOptions) => {
+  if(NO_BODY_METHODS.includes(options.method)) {
+    return null;
+  }
+
+  if(isXhrBodyTypeAllowed(options.body)) {
+    return options.body;
+  }
+
+  return JSON.stringify(options.body);
+}
+
+const fetchRequest = (options: AccioInstanceOptions) => {
+	const url = parseUrl(options);
+	const body = parseFetchBody(options);
 
 	const promise = ff(options.fetch)(url, {
 		method: options.method,
 		headers: options.headers,
 		body,
 		...options.config
-	});
+	}).then((response) => {
+    if(!options.progress || !response.body) {
+      return response;
+    }
+
+    const reader = response.body.getReader();
+
+    if(!reader) {
+      return response;
+    }
+
+    let loaded = 0;
+
+    const stream = new ReadableStream({
+      start(controller) {
+        const read = () => {
+          reader.read().then(({ done, value }) => {
+            if(done) {
+              controller.close();
+              
+              options.progress?.done?.({
+                size: 0,
+                loaded,
+                total: loaded,
+                percent: 100,
+                done: true,
+                timestamp: performance.now(),
+              });
+
+              return;
+            }
+
+            loaded += value.byteLength;
+
+            controller.enqueue(value);
+            options.progress?.next?.({
+              size: value.byteLength,
+              loaded,
+              total: 0,
+              percent: 0,
+              done: false,
+              timestamp: performance.now(),
+            });
+
+            read();
+          }).catch((error) => {
+            controller.error(error);
+            options.progress?.error?.(error);
+          });
+        };
+
+        read();
+      }
+    });
+
+    return new Response(stream);
+  });
 
 	if (options.delay) {
 		return new Promise<Response>((resolve) => setTimeout(() => resolve(promise), options.delay));
@@ -166,6 +292,71 @@ const request = (options: AccioInstanceOptions) => {
 
 	return promise;
 };
+
+// Used only when `progress` is defined.
+const xhrRequest = (options: AccioInstanceOptions, type: AccioResponseType): Promise<Response> => {
+  return new Promise<Response>(resolve => {
+    const xhr = new XMLHttpRequest();
+    const body = parseXhrBody(options);
+
+    xhr.responseType = type === 'json' ? 'text' : type.toLowerCase() as XMLHttpRequestResponseType;
+
+    let size = 0;
+
+    xhr.onreadystatechange = () => {
+      if(xhr.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+
+      const response = (!xhr.responseType || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
+
+      resolve(new Response(response, {
+        status: xhr.status,
+        statusText: xhr.statusText,
+        headers: parseXhrResponseHeaders(xhr),
+      }));
+    };
+
+    xhr.upload.onprogress = (event) => {
+      const loaded = event.loaded;
+      const total = event.total;
+      const percent = Math.round((loaded / total) * 100);
+
+      options.progress?.next?.({
+        size: loaded - size,
+        loaded,
+        total,
+        percent,
+        done: false,
+        timestamp: event.timeStamp,
+      });
+
+      size = loaded;
+    };
+
+    xhr.upload.onloadend = (event) => {
+      options.progress?.done?.({
+        size: 0,
+        loaded: event.loaded,
+        total: event.total,
+        percent: 100,
+        done: true,
+        timestamp: event.timeStamp,
+      });
+    };
+
+    xhr.open(options.method, parseUrl(options), true);
+    xhr.send(body);
+  });
+}
+
+const request = async <T = any>(options: AccioInstanceOptions, type: AccioResponseType): Promise<AccioResponse<T>> => {
+  if(options.progress && !NO_BODY_METHODS.includes(options.method)) {
+    return xhrRequest(options, type).then((response) => to(response.clone(), response[type]()));
+  }
+
+  return fetchRequest(options).then((response) => to(response.clone(), response[type]()));
+}
 
 const to = async <T>(response: Response, body: Promise<T>): Promise<AccioResponse<T>> => {
 	if (!response.ok) {
@@ -204,6 +395,7 @@ class Accio {
 		this.#options.body = options.body || undefined;
 		this.#options.config = options.config || {};
 		this.#options.delay = options.delay || 0;
+    this.#options.progress = options.progress || null;
 	}
 
 	config(config: Partial<AccioRequestInit>) {
@@ -270,6 +462,15 @@ class Accio {
 		this.#options.body = value;
 		return this;
 	}
+
+  progress(handler: AccioProgress) {
+    if (this.#immutable) {
+      return new Accio({ ...this.#options, progress: handler });
+    }
+
+    this.#options.progress = handler;
+    return this;
+  }
 
 	query(value: AccioQuery) {
 		if (this.#immutable) {
@@ -343,32 +544,24 @@ class Accio {
 		return this;
 	}
 
-	async response() {
-		return request(this.#options);
-	}
-
 	async json<T = any>() {
-		return request(this.#options).then((res) => to(res.clone(), res.json() as Promise<T>));
+		return request<T>(this.#options, 'json');
 	}
 
 	async arrayBuffer() {
-		return request(this.#options).then((res) => to(res.clone(), res.arrayBuffer()));
+		return request<ArrayBuffer>(this.#options, 'arrayBuffer');
 	}
 
 	async blob() {
-		return request(this.#options).then((res) => to(res.clone(), res.blob()));
+		return request<Blob>(this.#options, 'blob');
 	}
 
 	async formData() {
-		return request(this.#options).then((res) => to(res.clone(), res.formData()));
+		return request<FormData>(this.#options, 'formData');
 	}
 
 	async text() {
-		return request(this.#options).then((res) => to(res.clone(), res.text()));
-	}
-
-	debug() {
-		return this.#options;
+		return request<string>(this.#options, 'text');
 	}
 }
 

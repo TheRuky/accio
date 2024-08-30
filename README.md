@@ -1,6 +1,6 @@
 # 🪄 Accio 🔗
 
-Accio is a [fluent interface](https://en.wikipedia.org/wiki/Fluent_interface#JavaScript) abstraction for the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
+Accio is an HTTP client, a [fluent interface](https://en.wikipedia.org/wiki/Fluent_interface#JavaScript) abstraction for the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 
 ## ✨ Features
 
@@ -56,7 +56,7 @@ Currently, there is no NPM package or CDN link for Accio. The easiest way is to 
 
 ### 2. Your "library" sucks - I want better stuff!
 
-Accio is (technically) not a library - it's literally a file. Nevertheless, take a look at the libraries that inspired Accio.
+Well... I like it. Anyways, take a look at the libraries that inspired Accio.
 
 - [ky](https://github.com/sindresorhus/ky)
 - [wretch](https://github.com/elbywan/wretch)
