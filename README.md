@@ -33,20 +33,51 @@ console.log(data, error);
 ```ts
 import { accio } from './accio.ts';
 
-type Post = {
+type Article = {
   id: number;
   title: string;
   content: string;
 }
 
-const [data, error] = await accio('https://...').json<Post[]>();
+const [data, error] = await accio('https://...').json<Article[]>();
 
-// data is not `any` anymore, but Post array
+// data is not `any` anymore, but Article array
 
 console.log(data, error);
 ```
 
 > ℹ️ If type is not provided to `.json()`, it will use `any` by default.
+
+### ↔️ Create something with POST
+
+```ts
+import { accio } from './accio.ts';
+
+type Article = {
+  id: number;
+  title: string;
+  content: string;
+}
+
+const [data, error] = await accio('https://...')
+  .post({
+    title: 'Hello World!',
+    content: 'Testing Accio POST!',
+  })
+  .json<Article>();
+
+// or, alternatively:
+
+const [data, error] = await accio('https://...')
+  .body({
+    title: 'Hello World!',
+    content: 'Testing Accio POST!',
+  })
+  .post()
+  .json<Post>();
+
+console.log(data, error);
+```
 
 ## 🤨❓ FAQ
 

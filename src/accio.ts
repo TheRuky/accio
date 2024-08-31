@@ -254,7 +254,7 @@ const fetchRequest = (options: AccioInstanceOptions) => {
                 total: loaded,
                 percent: 100,
                 done: true,
-                timestamp: performance.now(),
+                timestamp: Date.now(),
               });
 
               return;
@@ -269,7 +269,7 @@ const fetchRequest = (options: AccioInstanceOptions) => {
               total: 0,
               percent: 0,
               done: false,
-              timestamp: performance.now(),
+              timestamp: Date.now(),
             });
 
             read();
@@ -328,7 +328,7 @@ const xhrRequest = (options: AccioInstanceOptions, type: AccioResponseType): Pro
         total,
         percent,
         done: false,
-        timestamp: event.timeStamp,
+        timestamp: Date.now(),
       });
 
       size = loaded;
@@ -341,7 +341,7 @@ const xhrRequest = (options: AccioInstanceOptions, type: AccioResponseType): Pro
         total: event.total,
         percent: 100,
         done: true,
-        timestamp: event.timeStamp,
+        timestamp: Date.now(),
       });
     };
 

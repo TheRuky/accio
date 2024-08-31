@@ -3,6 +3,7 @@ import { accio } from './accio';
 (async () => {
   const input = document.getElementById('file') as HTMLInputElement;
   const button = document.getElementById('button') as HTMLButtonElement;
+  const status = document.getElementById('status') as HTMLSpanElement;
 
   button.addEventListener('click', async () => {
     const file = input.files?.[0];
@@ -19,7 +20,7 @@ import { accio } from './accio';
       .body(formData)
       .progress({
         next: (progress) => {
-          console.log(progress);
+          status.innerText = `${progress.percent}%`;
         },
       })
       .json();
