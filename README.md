@@ -21,7 +21,7 @@ Just add (copy/paste) [`src/lib/accio.ts`](https://github.com/TheRuky/accio/blob
 ```ts
 import { accio } from './accio.ts';
 
-const [data, error] = await accio('https://...').json();
+const { data, error } = await accio('https://...').json();
 
 console.log(data, error);
 ```
@@ -39,7 +39,7 @@ type Article = {
 	content: string;
 };
 
-const [data, error] = await accio('https://...').json<Article[]>();
+const { data, error } = await accio('https://...').json<Article[]>();
 
 // data is not `any` anymore, but Article array
 
@@ -59,7 +59,7 @@ type Article = {
 	content: string;
 };
 
-const [data, error] = await accio('https://...')
+const { data, error } = await accio('https://...')
 	.post({
 		title: 'Hello World!',
 		content: 'Testing Accio POST!'
@@ -68,7 +68,7 @@ const [data, error] = await accio('https://...')
 
 // or, alternatively:
 
-const [data, error] = await accio('https://...')
+const { data, error } = await accio('https://...')
 	.body({
 		title: 'Hello World!',
 		content: 'Testing Accio POST!'

@@ -4,7 +4,7 @@
 	$effect(() => {
 		accio('https://jsonplaceholder.typicode.com/posts/1')
 			.json()
-			.then(([data]) => {
+			.then((data) => {
 				console.log(data);
 			});
 	});

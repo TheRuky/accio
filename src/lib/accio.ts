@@ -42,7 +42,13 @@ type AccioMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 /**
  * Response format types.
  */
-type AccioResponse<T> = [T | null, HttpError | null, Response];
+// type AccioResponse<T> = [T | null, HttpError | null, Response];
+
+type AccioResponse<T> = {
+	data: T | null;
+	error: HttpError | null;
+	response: Response;
+};
 
 /**
  * Additional options for the `fetch` function that are not part of the Accio API.
@@ -434,21 +440,41 @@ const request = async <T = any>(
 const to = async <T>(response: Response, body: Promise<T>): Promise<AccioResponse<T>> => {
 	if (!response.ok) {
 		try {
-			return [null, new HttpError(response.status, response.statusText, await body), response];
+			return {
+				data: null,
+				error: new HttpError(response.status, response.statusText, await body),
+				response
+			};
 		} catch (error) {
-			return [null, new HttpError(0, 'Unknown Error', error), response];
+			return {
+				data: null,
+				error: new HttpError(0, 'Unknown Error', error),
+				response
+			};
 		}
 	}
 
 	// 204 No Content
 	if (response.status === 204) {
-		return [null, null, response];
+		return {
+			data: null,
+			error: null,
+			response
+		};
 	}
 
 	try {
-		return [await body, null, response];
+		return {
+			data: await body,
+			error: null,
+			response
+		};
 	} catch (error) {
-		return [null, new HttpError(0, 'Unknown Error', error), response];
+		return {
+			data: null,
+			error: new HttpError(0, 'Unknown Error', error),
+			response
+		};
 	}
 };
 
